@@ -12,48 +12,58 @@
 
 <header>
   <h1>TRAFFIC CAMERA DASHBOARD</h1>
-  <div class="top-buttons">
-    <button id="mapBtn">Map</button>
-    <button id="themeToggle">Theme</button>
-  </div>
 </header>
 
 <main id="dashboard"></main>
 
-<!-- Video Modal -->
+<!-- VIDEO MODAL -->
 <div id="modal">
-  <span id="close">&times;</span>
-  <video controls autoplay playsinline></video>
+  <span id="close">✕</span>
+  <video controls playsinline></video>
 </div>
 
-<!-- Map Modal -->
+<!-- MAP MODAL -->
 <div id="mapModal">
-  <span id="closeMap">&times;</span>
+  <span id="closeMap">✕</span>
   <iframe src="https://www.openstreetmap.org/export/embed.html"></iframe>
 </div>
 
-<!-- Hidden Admin Panel -->
+<!-- ADMIN PANEL -->
 <div id="adminPanel">
-  <h2>Manage Cameras</h2>
-  <input type="text" id="camName" placeholder="Camera Name">
-  <input type="text" id="camURL" placeholder="HLS Stream URL (.m3u8)">
+  <div class="admin-header">
+    <h2>Admin</h2>
+    <button id="closeAdmin">✕</button>
+  </div>
+
+  <input id="camName" placeholder="Camera name">
+  <input id="camDesc" placeholder="Camera description">
+  <input id="camURL" placeholder="HLS stream (.m3u8)">
   <button id="addCam">Add Camera</button>
+
+  <h3>Existing Cameras</h3>
+  <ul id="cameraList"></ul>
 </div>
 
-<!-- Secret mobile tap zone -->
+<!-- BOTTOM BAR -->
+<div class="bottom-bar">
+  <button id="mapBtn">Map</button>
+  <button id="themeToggle">Theme</button>
+</div>
+
+<!-- SECRET TAP ZONE -->
 <div id="secretZone"></div>
 
-<!-- Firebase -->
+<!-- FIREBASE -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
- const firebaseConfig = {
-    apiKey: "AIzaSyBxI1zAW3j_aIqP-eNJPmkGoN2X3_JSmq0",
-    authDomain: "eloquent-yew-364020.firebaseapp.com",
-    projectId: "eloquent-yew-364020",
-    storageBucket: "eloquent-yew-364020.firebasestorage.app",
-    messagingSenderId: "535266160395",
-    appId: "1:535266160395:web:38f2e938f058a43e763c0e"
+  const firebaseConfig = {
+    apiKey: "PASTE_API_KEY",
+    authDomain: "PASTE_AUTH_DOMAIN",
+    projectId: "PASTE_PROJECT_ID",
+    storageBucket: "PASTE_BUCKET",
+    messagingSenderId: "PASTE_MSG_ID",
+    appId: "PASTE_APP_ID"
   };
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
