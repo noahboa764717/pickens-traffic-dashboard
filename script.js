@@ -1,22 +1,25 @@
-const ADMIN_PASSWORD = "changeme123"; // change this
+const ADMIN_PASSWORD = "pickens123";
 let adminUnlocked = false;
 
 const dashboard = document.getElementById('dashboard');
 const camsRef = db.collection("cameras");
+const cameraList = document.getElementById('cameraList');
+const adminPanel = document.getElementById('adminPanel');
 
-/* =========================
-   CAMERA CARD
-========================= */
-function createCameraCard(name, stream) {
+/* CAMERA CARD */
+function createCameraCard(name, desc, stream) {
   const card = document.createElement('div');
   card.className = 'camera-card offline';
+
   card.innerHTML = `
     <h2>${name}</h2>
+    <p class="cam-desc">${desc || ""}</p>
     <p class="timestamp">Loading…</p>
     <div class="video-wrapper">
       <div class="loader"></div>
       <video muted playsinline></video>
     </div>`;
+
   dashboard.appendChild(card);
 
   const video = card.querySelector('video');
@@ -34,35 +37,19 @@ function createCameraCard(name, stream) {
     card.classList.remove('online');
   }
 
-  function forcePlay() {
+  function startPlayback() {
     video.muted = true;
-    video.autoplay = true;
-    video.playsInline = true;
-    video.play().catch(() => {});
+    video.play().catch(()=>{});
   }
 
   if (video.canPlayType('application/vnd.apple.mpegurl')) {
     video.src = stream;
-    video.addEventListener('loadedmetadata', forcePlay);
+    video.addEventListener('loadedmetadata', startPlayback);
   } else if (Hls.isSupported()) {
-    const hls = new Hls({
-      liveSyncDurationCount: 2,
-      liveMaxLatencyDurationCount: 5,
-      maxLiveSyncPlaybackRate: 1.5,
-      lowLatencyMode: true
-    });
-
+    const hls = new Hls();
     hls.loadSource(stream);
     hls.attachMedia(video);
-
-    hls.on(Hls.Events.MANIFEST_PARSED, () => {
-      video.currentTime = video.duration;
-      forcePlay();
-    });
-
-    hls.on(Hls.Events.ERROR, (_, data) => {
-      if (data.fatal) markOffline();
-    });
+    hls.on(Hls.Events.MANIFEST_PARSED, startPlayback);
   }
 
   video.addEventListener('playing', () => {
@@ -71,91 +58,97 @@ function createCameraCard(name, stream) {
     markOnline();
   });
 
-  video.addEventListener('error', () => {
-    markOffline();
-    setTimeout(() => video.load(), 5000);
-  });
+  video.addEventListener('error', markOffline);
 
-  /* ===== FIXED MODAL ===== */
-  card.onclick = () => {
-    const modal = document.getElementById('modal');
-    const modalVideo = modal.querySelector('video');
-
-    // Clear any previous stream
-    modalVideo.pause();
-    modalVideo.src = "";
-
-    if (modalVideo.canPlayType('application/vnd.apple.mpegurl')) {
-      modalVideo.src = stream;
-    } else if (Hls.isSupported()) {
-      const hls = new Hls();
-      hls.loadSource(stream);
-      hls.attachMedia(modalVideo);
-    }
-
-    modalVideo.muted = false;
-    modalVideo.play().catch(()=>{});
-    modal.style.display = "flex";
-  };
+  card.onclick = () => openModal(stream);
 }
 
-/* =========================
-   MODAL CLOSE FIX
-========================= */
-const modal = document.getElementById('modal');
-const closeBtn = document.getElementById('close');
+/* MODAL */
+function openModal(stream) {
+  const modal = document.getElementById('modal');
+  const modalVideo = modal.querySelector('video');
 
-closeBtn.onclick = () => {
+  modalVideo.pause();
+  modalVideo.src = "";
+
+  if (modalVideo.canPlayType('application/vnd.apple.mpegurl')) {
+    modalVideo.src = stream;
+  } else if (Hls.isSupported()) {
+    const hls = new Hls();
+    hls.loadSource(stream);
+    hls.attachMedia(modalVideo);
+  }
+
+  modalVideo.play().catch(()=>{});
+  modal.style.display = "flex";
+}
+
+close.onclick = () => {
   const modalVideo = modal.querySelector('video');
   modalVideo.pause();
   modalVideo.src = "";
   modal.style.display = "none";
 };
 
-// Also close if clicking dark background
-modal.addEventListener('click', (e) => {
-  if (e.target === modal) {
-    closeBtn.onclick();
-  }
-});
+modal.addEventListener('click', e => { if (e.target === modal) close.onclick(); });
 
-/* =========================
-   FIREBASE SYNC
-========================= */
+/* FIREBASE SYNC */
 camsRef.onSnapshot(snapshot => {
   dashboard.innerHTML = "";
-  snapshot.forEach(doc => createCameraCard(doc.data().name, doc.data().url));
+  cameraList.innerHTML = "";
+
+  snapshot.forEach(doc => {
+    const cam = doc.data();
+    createCameraCard(cam.name, cam.desc, cam.url);
+
+    const li = document.createElement('li');
+    li.textContent = cam.name;
+
+    const editBtn = document.createElement('button');
+    editBtn.textContent = "Edit";
+    editBtn.onclick = () => editCamera(doc.id, cam);
+
+    const delBtn = document.createElement('button');
+    delBtn.textContent = "Delete";
+    delBtn.onclick = () => camsRef.doc(doc.id).delete();
+
+    li.appendChild(editBtn);
+    li.appendChild(delBtn);
+    cameraList.appendChild(li);
+  });
 });
 
-/* =========================
-   ADMIN ADD CAMERA
-========================= */
-document.getElementById('addCam').onclick = () => {
+/* ADD CAMERA */
+addCam.onclick = () => {
   if (!adminUnlocked) return alert("Admin locked");
-  const name = camName.value;
-  const url = camURL.value;
-  if (!name || !url) return;
-  camsRef.add({ name, url });
+  camsRef.add({ name: camName.value, desc: camDesc.value, url: camURL.value });
   camName.value = '';
+  camDesc.value = '';
   camURL.value = '';
 };
 
-/* =========================
-   ADMIN LOGIN
-========================= */
+/* EDIT CAMERA */
+function editCamera(id, cam) {
+  const name = prompt("Edit name:", cam.name);
+  const desc = prompt("Edit description:", cam.desc || "");
+  const url = prompt("Edit stream URL:", cam.url);
+  if (name && url) camsRef.doc(id).update({ name, desc, url });
+}
+
+/* ADMIN LOGIN */
 function openAdminLogin() {
   const entered = prompt("Enter admin password:");
   if (entered === ADMIN_PASSWORD) {
     adminUnlocked = true;
-    document.getElementById('adminPanel').classList.add('open');
+    adminPanel.classList.add('open');
   } else if (entered !== null) alert("Wrong password");
 }
 
-document.addEventListener('keydown', (e) => {
-  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'a') {
-    openAdminLogin();
-  }
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'a') openAdminLogin();
 });
+
+closeAdmin.onclick = () => adminPanel.classList.remove('open');
 
 /* Secret mobile tap */
 let tapCount = 0;
@@ -165,9 +158,7 @@ secretZone.addEventListener('click', () => {
   setTimeout(() => tapCount = 0, 2000);
 });
 
-/* =========================
-   UI BUTTONS
-========================= */
+/* UI BUTTONS */
 mapBtn.onclick = () => mapModal.style.display = "flex";
 closeMap.onclick = () => mapModal.style.display = "none";
 themeToggle.onclick = () => document.body.classList.toggle('light-mode');
