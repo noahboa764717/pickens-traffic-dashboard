@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Traffic Camera Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <h1>TRAFFIC CAMERA DASHBOARD</h1>
+</header>
+
+<main>
+
+  <div class="camera-card online" data-stream="https://video1.cdn.radaromega.com/live/488a0afca2d7/stream.m3u8">
+    <h2>Pickens Fire Station 10</h2>
+    <div class="video-wrapper">
+      <div class="loader"></div>
+      <video muted playsinline></video>
+    </div>
+  </div>
+
+  <div class="camera-card online" data-stream="YOUR_STREAM_2.m3u8">
+    <h2>Camera 2</h2>
+    <div class="video-wrapper">
+      <div class="loader"></div>
+      <video muted playsinline></video>
+    </div>
+  </div>
+
+</main>
+
+<div id="modal">
+  <span id="close">&times;</span>
+  <video controls autoplay playsinline></video>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
