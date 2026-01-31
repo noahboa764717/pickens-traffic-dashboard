@@ -1,4 +1,4 @@
-const ADMIN_PASSWORD = "changeme123";
+const ADMIN_PASSWORD = "pickenstraffic6741";
 let adminUnlocked = false;
 
 const dashboard = document.getElementById('dashboard');
