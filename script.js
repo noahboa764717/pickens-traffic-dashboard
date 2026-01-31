@@ -3,18 +3,36 @@ document.querySelectorAll('.camera-card').forEach(card => {
   const loader = card.querySelector('.loader');
   const stream = card.dataset.stream;
 
-  video.src = stream;
-  video.autoplay = true;
+  if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    // Safari/iOS
+    video.src = stream;
+  } else if (Hls.isSupported()) {
+    // Other browsers
+    const hls = new Hls();
+    hls.loadSource(stream);
+    hls.attachMedia(video);
+  }
 
-  video.oncanplay = () => {
+  video.muted = true;
+  video.play().catch(() => {});
+
+  video.addEventListener('canplay', () => {
     loader.style.display = "none";
     video.style.display = "block";
-  };
+  });
 
   card.onclick = () => {
     const modal = document.getElementById('modal');
     const modalVideo = modal.querySelector('video');
-    modalVideo.src = stream;
+
+    if (modalVideo.canPlayType('application/vnd.apple.mpegurl')) {
+      modalVideo.src = stream;
+    } else if (Hls.isSupported()) {
+      const hls = new Hls();
+      hls.loadSource(stream);
+      hls.attachMedia(modalVideo);
+    }
+
     modal.style.display = "flex";
   };
 });
