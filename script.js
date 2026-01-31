@@ -38,32 +38,41 @@ function createCameraCard(name, stream) {
     video.muted = true;
     video.autoplay = true;
     video.playsInline = true;
-
-    const playPromise = video.play();
-    if (playPromise !== undefined) {
-      playPromise.catch(() => {
-        console.log("Autoplay blocked — will start on user interaction");
-      });
-    }
+    video.play().catch(() => {});
   }
 
-  /* HLS Setup */
+  /* =========================
+     HLS STREAM SETUP
+  ========================= */
   if (video.canPlayType('application/vnd.apple.mpegurl')) {
     video.src = stream;
     video.addEventListener('loadedmetadata', forcePlay);
   } else if (Hls.isSupported()) {
     const hls = new Hls({
-      liveSyncDurationCount: 3,
-      maxLiveSyncPlaybackRate: 1.5
+      liveSyncDurationCount: 2,
+      liveMaxLatencyDurationCount: 5,
+      maxLiveSyncPlaybackRate: 1.5,
+      lowLatencyMode: true,
+      backBufferLength: 30
     });
 
     hls.loadSource(stream);
     hls.attachMedia(video);
 
-    hls.on(Hls.Events.MANIFEST_PARSED, forcePlay);
-    hls.on(Hls.Events.LEVEL_LOADED, forcePlay);
+    // Jump to live when ready
+    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      video.currentTime = video.duration;
+      forcePlay();
+    });
 
-    hls.on(Hls.Events.ERROR, function (_, data) {
+    // Keep Chrome pinned to live edge
+    hls.on(Hls.Events.LEVEL_UPDATED, () => {
+      if (video.duration - video.currentTime > 5) {
+        video.currentTime = video.duration;
+      }
+    });
+
+    hls.on(Hls.Events.ERROR, (_, data) => {
       if (data.fatal) markOffline();
     });
   }
@@ -79,7 +88,9 @@ function createCameraCard(name, stream) {
     setTimeout(() => video.load(), 5000);
   });
 
-  /* Modal playback */
+  /* =========================
+     MODAL PLAYBACK
+  ========================= */
   card.onclick = () => {
     const modal = document.getElementById('modal');
     const modalVideo = modal.querySelector('video');
@@ -144,9 +155,10 @@ secretZone.addEventListener('click', () => {
   setTimeout(() => tapCount = 0, 2000);
 });
 
-/* UI buttons */
+/* =========================
+   UI BUTTONS
+========================= */
 mapBtn.onclick = () => mapModal.style.display = "flex";
 closeMap.onclick = () => mapModal.style.display = "none";
 close.onclick = () => modal.style.display = "none";
 themeToggle.onclick = () => document.body.classList.toggle('light-mode');
-
