@@ -41,9 +41,6 @@ function createCameraCard(name, stream) {
     video.play().catch(() => {});
   }
 
-  /* =========================
-     HLS STREAM SETUP
-  ========================= */
   if (video.canPlayType('application/vnd.apple.mpegurl')) {
     video.src = stream;
     video.addEventListener('loadedmetadata', forcePlay);
@@ -52,24 +49,15 @@ function createCameraCard(name, stream) {
       liveSyncDurationCount: 2,
       liveMaxLatencyDurationCount: 5,
       maxLiveSyncPlaybackRate: 1.5,
-      lowLatencyMode: true,
-      backBufferLength: 30
+      lowLatencyMode: true
     });
 
     hls.loadSource(stream);
     hls.attachMedia(video);
 
-    // Jump to live when ready
     hls.on(Hls.Events.MANIFEST_PARSED, () => {
       video.currentTime = video.duration;
       forcePlay();
-    });
-
-    // Keep Chrome pinned to live edge
-    hls.on(Hls.Events.LEVEL_UPDATED, () => {
-      if (video.duration - video.currentTime > 5) {
-        video.currentTime = video.duration;
-      }
     });
 
     hls.on(Hls.Events.ERROR, (_, data) => {
@@ -88,12 +76,14 @@ function createCameraCard(name, stream) {
     setTimeout(() => video.load(), 5000);
   });
 
-  /* =========================
-     MODAL PLAYBACK
-  ========================= */
+  /* ===== FIXED MODAL ===== */
   card.onclick = () => {
     const modal = document.getElementById('modal');
     const modalVideo = modal.querySelector('video');
+
+    // Clear any previous stream
+    modalVideo.pause();
+    modalVideo.src = "";
 
     if (modalVideo.canPlayType('application/vnd.apple.mpegurl')) {
       modalVideo.src = stream;
@@ -108,6 +98,26 @@ function createCameraCard(name, stream) {
     modal.style.display = "flex";
   };
 }
+
+/* =========================
+   MODAL CLOSE FIX
+========================= */
+const modal = document.getElementById('modal');
+const closeBtn = document.getElementById('close');
+
+closeBtn.onclick = () => {
+  const modalVideo = modal.querySelector('video');
+  modalVideo.pause();
+  modalVideo.src = "";
+  modal.style.display = "none";
+};
+
+// Also close if clicking dark background
+modal.addEventListener('click', (e) => {
+  if (e.target === modal) {
+    closeBtn.onclick();
+  }
+});
 
 /* =========================
    FIREBASE SYNC
@@ -160,5 +170,4 @@ secretZone.addEventListener('click', () => {
 ========================= */
 mapBtn.onclick = () => mapModal.style.display = "flex";
 closeMap.onclick = () => mapModal.style.display = "none";
-close.onclick = () => modal.style.display = "none";
 themeToggle.onclick = () => document.body.classList.toggle('light-mode');
