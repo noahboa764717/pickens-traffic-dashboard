@@ -62,3 +62,4 @@ video { width:100%; height:100%; object-fit:cover; display:none; }
 /* Light mode */
 .light-mode { background:#f4f4f4; color:#111; }
 .light-mode .camera-card { background:#fff; }
+
