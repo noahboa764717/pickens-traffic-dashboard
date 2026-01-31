@@ -1,11 +1,11 @@
-const ADMIN_PASSWORD = "pickens123"; // change this
+const ADMIN_PASSWORD = "changeme123"; // change this
 let adminUnlocked = false;
 
 const dashboard = document.getElementById('dashboard');
 const camsRef = db.collection("cameras");
 
 /* =========================
-   CREATE CAMERA CARD
+   CAMERA CARD
 ========================= */
 function createCameraCard(name, stream) {
   const card = document.createElement('div');
@@ -34,7 +34,7 @@ function createCameraCard(name, stream) {
     card.classList.remove('online');
   }
 
-  function startPlayback() {
+  function forcePlay() {
     video.muted = true;
     video.autoplay = true;
     video.playsInline = true;
@@ -42,25 +42,33 @@ function createCameraCard(name, stream) {
     const playPromise = video.play();
     if (playPromise !== undefined) {
       playPromise.catch(() => {
-        console.log("Autoplay blocked — waiting for user interaction");
+        console.log("Autoplay blocked — will start on user interaction");
       });
     }
   }
 
-  /* HLS STREAM SETUP */
+  /* HLS Setup */
   if (video.canPlayType('application/vnd.apple.mpegurl')) {
     video.src = stream;
-    video.addEventListener('loadedmetadata', startPlayback);
+    video.addEventListener('loadedmetadata', forcePlay);
   } else if (Hls.isSupported()) {
-    const hls = new Hls({ liveSyncDurationCount: 3 });
+    const hls = new Hls({
+      liveSyncDurationCount: 3,
+      maxLiveSyncPlaybackRate: 1.5
+    });
+
     hls.loadSource(stream);
     hls.attachMedia(video);
 
-    hls.on(Hls.Events.MANIFEST_PARSED, startPlayback);
-    hls.on(Hls.Events.ERROR, () => markOffline());
+    hls.on(Hls.Events.MANIFEST_PARSED, forcePlay);
+    hls.on(Hls.Events.LEVEL_LOADED, forcePlay);
+
+    hls.on(Hls.Events.ERROR, function (_, data) {
+      if (data.fatal) markOffline();
+    });
   }
 
-  video.addEventListener('canplay', () => {
+  video.addEventListener('playing', () => {
     loader.style.display = "none";
     video.style.display = "block";
     markOnline();
@@ -71,7 +79,7 @@ function createCameraCard(name, stream) {
     setTimeout(() => video.load(), 5000);
   });
 
-  /* MODAL PLAYBACK */
+  /* Modal playback */
   card.onclick = () => {
     const modal = document.getElementById('modal');
     const modalVideo = modal.querySelector('video');
@@ -91,7 +99,7 @@ function createCameraCard(name, stream) {
 }
 
 /* =========================
-   FIREBASE REALTIME LOAD
+   FIREBASE SYNC
 ========================= */
 camsRef.onSnapshot(snapshot => {
   dashboard.innerHTML = "";
@@ -136,10 +144,9 @@ secretZone.addEventListener('click', () => {
   setTimeout(() => tapCount = 0, 2000);
 });
 
-/* =========================
-   UI BUTTONS
-========================= */
+/* UI buttons */
 mapBtn.onclick = () => mapModal.style.display = "flex";
 closeMap.onclick = () => mapModal.style.display = "none";
 close.onclick = () => modal.style.display = "none";
 themeToggle.onclick = () => document.body.classList.toggle('light-mode');
+
