@@ -1,77 +1,62 @@
 const ADMIN_PASSWORD = "pickens123";
 let adminUnlocked = false;
 
-const dashboard = document.getElementById('dashboard');
+const dashboard = document.getElementById("dashboard");
 const camsRef = db.collection("cameras");
-const cameraList = document.getElementById('cameraList');
-const adminPanel = document.getElementById('adminPanel');
+const adminPanel = document.getElementById("adminPanel");
+const cameraList = document.getElementById("cameraList");
 
-/* CAMERA CARD */
+/* CREATE CAMERA */
 function createCameraCard(name, desc, stream) {
-  const card = document.createElement('div');
-  card.className = 'camera-card offline';
+  const card = document.createElement("div");
+  card.className = "camera-card offline";
 
   card.innerHTML = `
     <h2>${name}</h2>
     <p class="cam-desc">${desc || ""}</p>
-    <p class="timestamp">Loading…</p>
     <div class="video-wrapper">
       <div class="loader"></div>
       <video muted playsinline></video>
-    </div>`;
+    </div>
+  `;
 
   dashboard.appendChild(card);
 
-  const video = card.querySelector('video');
-  const loader = card.querySelector('.loader');
-  const timeEl = card.querySelector('.timestamp');
+  const video = card.querySelector("video");
+  const loader = card.querySelector(".loader");
 
-  function markOnline() {
-    card.classList.add('online');
-    card.classList.remove('offline');
-    timeEl.textContent = "Live as of " + new Date().toLocaleTimeString();
-  }
-
-  function markOffline() {
-    card.classList.add('offline');
-    card.classList.remove('online');
-  }
-
-  function startPlayback() {
-    video.muted = true;
+  function start() {
     video.play().catch(()=>{});
   }
 
-  if (video.canPlayType('application/vnd.apple.mpegurl')) {
+  if (video.canPlayType("application/vnd.apple.mpegurl")) {
     video.src = stream;
-    video.addEventListener('loadedmetadata', startPlayback);
+    video.addEventListener("loadedmetadata", start);
   } else if (Hls.isSupported()) {
     const hls = new Hls();
     hls.loadSource(stream);
     hls.attachMedia(video);
-    hls.on(Hls.Events.MANIFEST_PARSED, startPlayback);
+    hls.on(Hls.Events.MANIFEST_PARSED, start);
   }
 
-  video.addEventListener('playing', () => {
+  video.addEventListener("playing", () => {
     loader.style.display = "none";
     video.style.display = "block";
-    markOnline();
+    card.classList.add("online");
   });
-
-  video.addEventListener('error', markOffline);
 
   card.onclick = () => openModal(stream);
 }
 
 /* MODAL */
 function openModal(stream) {
-  const modal = document.getElementById('modal');
-  const modalVideo = modal.querySelector('video');
+  const modal = document.getElementById("modal");
+  const modalVideo = modal.querySelector("video");
 
   modalVideo.pause();
   modalVideo.src = "";
 
-  if (modalVideo.canPlayType('application/vnd.apple.mpegurl')) {
+  if (modalVideo.canPlayType("application/vnd.apple.mpegurl")) {
     modalVideo.src = stream;
   } else if (Hls.isSupported()) {
     const hls = new Hls();
@@ -84,13 +69,9 @@ function openModal(stream) {
 }
 
 close.onclick = () => {
-  const modalVideo = modal.querySelector('video');
-  modalVideo.pause();
-  modalVideo.src = "";
   modal.style.display = "none";
+  modal.querySelector("video").pause();
 };
-
-modal.addEventListener('click', e => { if (e.target === modal) close.onclick(); });
 
 /* FIREBASE SYNC */
 camsRef.onSnapshot(snapshot => {
@@ -101,64 +82,58 @@ camsRef.onSnapshot(snapshot => {
     const cam = doc.data();
     createCameraCard(cam.name, cam.desc, cam.url);
 
-    const li = document.createElement('li');
+    const li = document.createElement("li");
     li.textContent = cam.name;
 
-    const editBtn = document.createElement('button');
-    editBtn.textContent = "Edit";
-    editBtn.onclick = () => editCamera(doc.id, cam);
+    const edit = document.createElement("button");
+    edit.textContent = "Edit";
+    edit.onclick = () => {
+      const name = prompt("Name", cam.name);
+      const desc = prompt("Desc", cam.desc || "");
+      const url = prompt("URL", cam.url);
+      if (name && url) camsRef.doc(doc.id).update({name,desc,url});
+    };
 
-    const delBtn = document.createElement('button');
-    delBtn.textContent = "Delete";
-    delBtn.onclick = () => camsRef.doc(doc.id).delete();
+    const del = document.createElement("button");
+    del.textContent = "Delete";
+    del.onclick = () => camsRef.doc(doc.id).delete();
 
-    li.appendChild(editBtn);
-    li.appendChild(delBtn);
+    li.append(edit, del);
     cameraList.appendChild(li);
   });
 });
 
 /* ADD CAMERA */
 addCam.onclick = () => {
-  if (!adminUnlocked) return alert("Admin locked");
-  camsRef.add({ name: camName.value, desc: camDesc.value, url: camURL.value });
-  camName.value = '';
-  camDesc.value = '';
-  camURL.value = '';
+  if (!adminUnlocked) return;
+  camsRef.add({name:camName.value, desc:camDesc.value, url:camURL.value});
+  camName.value = camDesc.value = camURL.value = "";
 };
 
-/* EDIT CAMERA */
-function editCamera(id, cam) {
-  const name = prompt("Edit name:", cam.name);
-  const desc = prompt("Edit description:", cam.desc || "");
-  const url = prompt("Edit stream URL:", cam.url);
-  if (name && url) camsRef.doc(id).update({ name, desc, url });
-}
-
-/* ADMIN LOGIN */
-function openAdminLogin() {
-  const entered = prompt("Enter admin password:");
-  if (entered === ADMIN_PASSWORD) {
+/* ADMIN ACCESS */
+function openAdmin() {
+  const p = prompt("Admin password:");
+  if (p === ADMIN_PASSWORD) {
     adminUnlocked = true;
-    adminPanel.classList.add('open');
-  } else if (entered !== null) alert("Wrong password");
+    adminPanel.classList.add("open");
+  }
 }
 
-document.addEventListener('keydown', e => {
-  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'a') openAdminLogin();
+document.addEventListener("keydown", e => {
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "A") openAdmin();
 });
 
-closeAdmin.onclick = () => adminPanel.classList.remove('open');
+closeAdmin.onclick = () => adminPanel.classList.remove("open");
 
-/* Secret mobile tap */
-let tapCount = 0;
-secretZone.addEventListener('click', () => {
-  tapCount++;
-  if (tapCount >= 5) { openAdminLogin(); tapCount = 0; }
-  setTimeout(() => tapCount = 0, 2000);
-});
+/* SECRET TAP */
+let taps = 0;
+secretZone.onclick = () => {
+  taps++;
+  if (taps >= 5) { openAdmin(); taps = 0; }
+  setTimeout(()=>taps=0,2000);
+};
 
-/* UI BUTTONS */
+/* UI */
 mapBtn.onclick = () => mapModal.style.display = "flex";
 closeMap.onclick = () => mapModal.style.display = "none";
-themeToggle.onclick = () => document.body.classList.toggle('light-mode');
+themeToggle.onclick = () => document.body.classList.toggle("light-mode");
