@@ -5,37 +5,59 @@
   <title>Traffic Camera Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#00ff5a">
 </head>
 <body>
 
 <header>
   <h1>TRAFFIC CAMERA DASHBOARD</h1>
+  <div class="top-buttons">
+    <button id="mapBtn">Map</button>
+    <button id="themeToggle">Theme</button>
+  </div>
 </header>
 
-<main>
+<main id="dashboard"></main>
 
-  <div class="camera-card online" data-stream="https://video1.cdn.radaromega.com/live/488a0afca2d7/stream.m3u8">
-    <h2>Pickens Fire Station 10</h2>
-    <div class="video-wrapper">
-      <div class="loader"></div>
-      <video muted playsinline></video>
-    </div>
-  </div>
-
-  <div class="camera-card online" data-stream="https://video4.cdn.radaromega.com/live/090cb9e181d4/stream.m3u8">
-    <h2>Pickens Fire Station 12</h2>
-    <div class="video-wrapper">
-      <div class="loader"></div>
-      <video muted playsinline></video>
-    </div>
-  </div>
-
-</main>
-
+<!-- Video Modal -->
 <div id="modal">
   <span id="close">&times;</span>
   <video controls autoplay playsinline></video>
 </div>
+
+<!-- Map Modal -->
+<div id="mapModal">
+  <span id="closeMap">&times;</span>
+  <iframe src="https://www.openstreetmap.org/export/embed.html"></iframe>
+</div>
+
+<!-- Hidden Admin Panel -->
+<div id="adminPanel">
+  <h2>Manage Cameras</h2>
+  <input type="text" id="camName" placeholder="Camera Name">
+  <input type="text" id="camURL" placeholder="HLS Stream URL (.m3u8)">
+  <button id="addCam">Add Camera</button>
+</div>
+
+<!-- Secret mobile tap zone -->
+<div id="secretZone"></div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "PASTE_API_KEY",
+    authDomain: "PASTE_AUTH_DOMAIN",
+    projectId: "PASTE_PROJECT_ID",
+    storageBucket: "PASTE_BUCKET",
+    messagingSenderId: "PASTE_MSG_ID",
+    appId: "PASTE_APP_ID"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+</script>
 
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <script src="script.js"></script>
