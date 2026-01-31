@@ -1,9 +1,12 @@
-const ADMIN_PASSWORD = "pickenstraffic6741";
+const ADMIN_PASSWORD = "pickens123"; // change this
 let adminUnlocked = false;
 
 const dashboard = document.getElementById('dashboard');
 const camsRef = db.collection("cameras");
 
+/* =========================
+   CREATE CAMERA CARD
+========================= */
 function createCameraCard(name, stream) {
   const card = document.createElement('div');
   card.className = 'camera-card offline';
@@ -25,17 +28,35 @@ function createCameraCard(name, stream) {
     card.classList.remove('offline');
     timeEl.textContent = "Live as of " + new Date().toLocaleTimeString();
   }
+
   function markOffline() {
     card.classList.add('offline');
     card.classList.remove('online');
   }
 
+  function startPlayback() {
+    video.muted = true;
+    video.autoplay = true;
+    video.playsInline = true;
+
+    const playPromise = video.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(() => {
+        console.log("Autoplay blocked — waiting for user interaction");
+      });
+    }
+  }
+
+  /* HLS STREAM SETUP */
   if (video.canPlayType('application/vnd.apple.mpegurl')) {
     video.src = stream;
+    video.addEventListener('loadedmetadata', startPlayback);
   } else if (Hls.isSupported()) {
-    const hls = new Hls();
+    const hls = new Hls({ liveSyncDurationCount: 3 });
     hls.loadSource(stream);
     hls.attachMedia(video);
+
+    hls.on(Hls.Events.MANIFEST_PARSED, startPlayback);
     hls.on(Hls.Events.ERROR, () => markOffline());
   }
 
@@ -50,18 +71,36 @@ function createCameraCard(name, stream) {
     setTimeout(() => video.load(), 5000);
   });
 
+  /* MODAL PLAYBACK */
   card.onclick = () => {
     const modal = document.getElementById('modal');
-    modal.querySelector('video').src = stream;
+    const modalVideo = modal.querySelector('video');
+
+    if (modalVideo.canPlayType('application/vnd.apple.mpegurl')) {
+      modalVideo.src = stream;
+    } else if (Hls.isSupported()) {
+      const hls = new Hls();
+      hls.loadSource(stream);
+      hls.attachMedia(modalVideo);
+    }
+
+    modalVideo.muted = false;
+    modalVideo.play().catch(()=>{});
     modal.style.display = "flex";
   };
 }
 
+/* =========================
+   FIREBASE REALTIME LOAD
+========================= */
 camsRef.onSnapshot(snapshot => {
   dashboard.innerHTML = "";
   snapshot.forEach(doc => createCameraCard(doc.data().name, doc.data().url));
 });
 
+/* =========================
+   ADMIN ADD CAMERA
+========================= */
 document.getElementById('addCam').onclick = () => {
   if (!adminUnlocked) return alert("Admin locked");
   const name = camName.value;
@@ -72,6 +111,9 @@ document.getElementById('addCam').onclick = () => {
   camURL.value = '';
 };
 
+/* =========================
+   ADMIN LOGIN
+========================= */
 function openAdminLogin() {
   const entered = prompt("Enter admin password:");
   if (entered === ADMIN_PASSWORD) {
@@ -86,6 +128,7 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+/* Secret mobile tap */
 let tapCount = 0;
 secretZone.addEventListener('click', () => {
   tapCount++;
@@ -93,6 +136,9 @@ secretZone.addEventListener('click', () => {
   setTimeout(() => tapCount = 0, 2000);
 });
 
+/* =========================
+   UI BUTTONS
+========================= */
 mapBtn.onclick = () => mapModal.style.display = "flex";
 closeMap.onclick = () => mapModal.style.display = "none";
 close.onclick = () => modal.style.display = "none";
